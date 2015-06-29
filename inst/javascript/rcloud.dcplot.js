@@ -1,6 +1,9 @@
 ((function() {
 
 requirejs.config({
+    "paths": {
+        "wdcplot": "../../shared.R/rcloud.dcplot/wdcplot"
+    },
     "shim": {
         "crossfilter": {
             deps: [],
