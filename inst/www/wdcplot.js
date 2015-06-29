@@ -392,7 +392,8 @@
                        style: "display: none;"})
                 .append("reset")
                 .click(function(group_name) {
-                    return function() {
+                    return function(e) {
+                        e.preventDefault();
                         window.charts[name].filterAll();
                         dc.redrawAll(group_name);
                     };
