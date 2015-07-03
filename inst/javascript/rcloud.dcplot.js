@@ -2,7 +2,8 @@
 
 requirejs.config({
     "paths": {
-        "wdcplot": "../../shared.R/rcloud.dcplot/wdcplot"
+        "wdcplot": "../../shared.R/rcloud.dcplot/wdcplot",
+        "dcplot": "../../shared.R/rcloud.dcplot/dcplot"
     },
     "shim": {
         "crossfilter": {
