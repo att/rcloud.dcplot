@@ -374,7 +374,7 @@
 
         var title = definition.title;
         var table = $();
-        var props = {id: name, style: "float:left"};
+        var props = {id: name};
 
         if(_.has(definition,'columns')) {
             var chartname = name + "Div";
