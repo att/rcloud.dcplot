@@ -9,4 +9,5 @@ dcplot.caps <- NULL
     caps
   }
   dcplot.caps <<- f("rcloud.dcplot", "rcloud.dcplot.js")
+  rcloud.install.css("/shared.R/rcloud.dcplot/dc.css")
 }
