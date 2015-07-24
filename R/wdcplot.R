@@ -11,6 +11,12 @@ wdcplot <- function(data, dims=NULL, groups=NULL, charts=NULL)
   cols2placeholders <- Map(wdcplot.column, names(data))
   looksee <- list2env(c(cols2placeholders, specials))
 
+  # this feint comes from pryr: make substitute work in the global environment
+  parent.env <- parent.frame();
+  if (identical(parent.env, globalenv())) {
+    parent.env <- as.list(parent.env)
+  }
+
   # substitute in this order:
   # - first evaluate anything bquoted with .(expr)
   # - then substitute in the dataframe pseudo-environment
@@ -20,7 +26,7 @@ wdcplot <- function(data, dims=NULL, groups=NULL, charts=NULL)
             list(do.call(substitute,
                          list(do.call(bquote, list(sexpr, where = parent.frame(2))),
                               looksee)),
-                 parent.frame(2)))
+                 parent.env))
 
   # Enable use of R variables as parameters in definitions, i.e. width = mywidth
   dims2 <- bfp(substitute(dims))
