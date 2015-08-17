@@ -39,5 +39,7 @@ wdcplot <- function(data, dims=NULL, groups=NULL, charts=NULL) {
   groups2 <- wdcplot.substitute(context, substitute(groups))
   charts2 <- wdcplot.substitute(context, substitute(charts))
 
-  deferred.rcloud.result(function() dcplot.caps$handle_dcplot(list("dcplot", data, dims2, groups2, charts2)))
+  div.maker <- dcplot.caps$handle_dcplot(list("dcplot", data, dims2, groups2, charts2))
+
+  deferred.rcloud.result(function() div.maker)
 }
