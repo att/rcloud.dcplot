@@ -2,7 +2,8 @@
 //////////////////////////////////////////////////////////////////////////////
 (function() { function _wdcplot(dcplot, dataframe, dc) {
     var chart_group = 0;
-    window.charts = {}; // initialize a global namespace for charts
+    // initialize a global namespace for chart groups and their crossfilter stuff
+    window.wdcplot_registry = window.wdcplot_registry || {};
 
     function chart_group_name(group_no) {
         return 'dcplotgroup' + group_no;
@@ -394,7 +395,7 @@
                 .click(function(group_name) {
                     return function(e) {
                         e.preventDefault();
-                        window.charts[name].filterAll();
+                        window.wdcplot_registry[group_name].charts[name].filterAll();
                         dc.redrawAll(group_name);
                     };
                 }(chart_group_name(chart_group)));

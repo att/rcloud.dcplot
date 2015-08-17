@@ -17,6 +17,8 @@ requirejs.config({
 
 return {
     handle_dcplot: function(data, k) {
+        // it seems to me more of this belongs in wdcplot.js - e.g. window.charts is
+        // initialized and used there. there should only be stuff here to package this up.
         require(["wdcplot", "dcplot"], function(wdcplot, dcplot) {
             var charts, elem;
             try {
@@ -30,7 +32,7 @@ return {
             }
             try {
                 var dccharts = dcplot(charts.dataframe, charts.groupname, charts.defn);
-                _.extend(window.charts, dccharts);
+                window.wdcplot_registry[charts.groupname] = dccharts;
             }
             catch(e) {
                 k(function() {
