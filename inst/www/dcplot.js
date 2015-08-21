@@ -252,7 +252,8 @@
                 parents: ['color'],
                 r: {default: 2}, // radiusValueAccessor
                 'r.scale': {required: false}, // scale component of r
-                'r.domain': {required: false} // domain component of r
+                'r.domain': {required: false}, // domain component of r
+                'r.min': {required: false}
             },
             bubble: {
                 concrete: true,
@@ -869,6 +870,8 @@
                             chart.dotRadius(defn.dotRadius);
                     },
                     abstractBubble: function() {
+                        if(_.has(defn, 'r.min'))
+                            chart.minRadius(defn['r.min']);
                     },
                     bubble: function() {
                         if(_.has(defn, 'r'))
