@@ -51,6 +51,12 @@
         "+": una_or_bin_op('+'),
         "*": bin_op('*'),
         "/": bin_op('/'),
+        "<": bin_op('<'),
+        ">": bin_op('>'),
+        "<=": bin_op('<='),
+        ">=": bin_op('>='),
+        "==": bin_op('==='),
+        "!=": bin_op('!=='),
         "^": bin_op_fun(function(left, right) { // note: ** gets converted to ^
             return "Math.pow(" + left + ", " + right + ")";
         }),
@@ -64,6 +70,16 @@
                 sub = expression(frame, args[2], ctx);
             return {lambda: ray.lambda || sub.lambda,
                     text: ray.text + '[' + sub.text + ']'};
+        },
+        "if": function(frame, args, ctx) {
+            var cond = expression(frame, args[1], ctx),
+                then = expression(frame, args[2], ctx),
+                else_ = expression(frame, args[3], ctx);
+            return {lambda: cond.lambda || then.lambda || else_.lambda,
+                    text: cond.text + '?' + then.text + ':' + else_.text};
+        },
+        "string": function(frame, args, ctx) {
+            return {lambda: false, text: '"' + args[1] + '"'};
         },
         default: function(frame, args, ctx) { // parens or function application
             var fun = expression(frame, args[0], ctx),

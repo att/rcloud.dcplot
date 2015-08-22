@@ -1,6 +1,6 @@
 Package: rcloud.dcplot
 Title: Dimensional Charting for RCloud
-Version: 0.7
+Version: 0.7.1
 Author: Gordon Woodhull <gordon@research.att.com>
 Maintainer: Gordon Woodhull <gordon@research.att.com>
 Description: rcloud.dcplot provides a concise language for defining linked charts with brushing
