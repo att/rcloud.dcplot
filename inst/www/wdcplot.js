@@ -4,6 +4,7 @@
     var chart_group = 0;
     // initialize a global namespace for chart groups and their crossfilter stuff
     window.wdcplot_registry = window.wdcplot_registry || {};
+    window.wdcplot_current = null;
 
     function chart_group_name(group_no) {
         return 'dcplotgroup' + group_no;

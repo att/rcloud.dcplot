@@ -33,6 +33,7 @@ return {
             try {
                 var dccharts = dcplot(charts.dataframe, charts.groupname, charts.defn);
                 window.wdcplot_registry[charts.groupname] = dccharts;
+                window.wdcplot_current = charts.groupname;
             }
             catch(e) {
                 k(function() {
