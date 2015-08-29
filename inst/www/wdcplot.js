@@ -34,10 +34,6 @@
         };
     }
 
-    function value(v) {
-        return _.isString(v) ? '"' + v + '"' : v;
-    }
-
     function comma_sep(frame, args, ctx) {
         var elems = _.map(args, function(arg) { return expression(frame, arg, ctx); });
         return {
@@ -192,7 +188,7 @@
     /* a wdcplot argument may be
      - null
      - a column accessor or special variable marked with class attribute
-     - an array (we assume any top-level array contains only literals)
+     - an array (which may contain expressions)
      - a string or a number
      - otherwise we build javascript from the expression tree; if it contains
      field names identifiers, it's a lambda(key,value) else execute it immediately
@@ -213,8 +209,6 @@
             }
             else if((place = dataframe_column(sexp)))
                 return frame.access(place);
-            else if(sexp[0]==='c')
-                return sexp.slice(1);
             // else we'll process as expression below
         }
         else if(_.isNumber(sexp) || _.isString(sexp))
