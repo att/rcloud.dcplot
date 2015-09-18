@@ -116,9 +116,25 @@
         return {lambda: false, text: text};
     }
 
+    function list(frame, sexp, ctx) {
+        var lambda = false;
+        ctx.indent++;
+        var elems = [];
+        for(var i=1; i<sexp.length; ++i) {
+            var key = sexp[i][0];
+            var val = expression(frame, sexp[i][1], ctx);
+            elems.push(key + ': ' + val.text);
+            lambda |= val.lambda;
+        }
+        ctx.indent--;
+        return {lambda: lambda, text: '({' + elems.join(', ') + '})'};
+    }
+
     function node(frame, sexp, ctx) {
         if($.isArray(sexp[0]) && sexp[0][0] === "func") // special case lambda expr trees
             return lambda(frame, sexp, ctx);
+        else if($.isArray(sexp[0]) && !sexp[0][0] && sexp[0][1] === "list") // special case lists (?)
+            return list(frame, sexp, ctx);
         var op = operators[sexp[0]] || operators.default;
         return op(frame, sexp, ctx);
     }
