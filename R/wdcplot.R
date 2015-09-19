@@ -3,6 +3,8 @@ wdcplot.column <- function(name) structure(name, wdcplot.placeholder = "column")
 
 wdcplot.default.context <- NULL
 
+wdcplot.keywords <- c('group', 'groups', 'dimension', 'dimensions', 'chart', 'charts')
+
 wdcplot.substitute <- function(context, expr) {
   data <- context$data
 
@@ -11,7 +13,10 @@ wdcplot.substitute <- function(context, expr) {
                    ..value.. = wdcplot.special.variable('value'),
                    ..selected.. = wdcplot.special.variable('selected'),
                    ..key.. = wdcplot.special.variable('key'))
-  cols2placeholders <- Map(wdcplot.column, names(data))
+  # reserved keywords should not be interpreted as columns - this is pretty
+  # dumb and will get better when we only interpret expressions, not the whole block
+  column.names <- setdiff(names(data), wdcplot.keywords)
+  cols2placeholders <- Map(wdcplot.column, column.names)
   looksee <- list2env(c(cols2placeholders, specials))
 
   # this feint comes from pryr: make substitute work in the global environment
