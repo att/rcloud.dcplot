@@ -7,7 +7,7 @@ and filtered charts. The language is inspired by (but does not share vocabulary 
 and inferences for its parameters in order to reduce boilerplate.
 
 The charts are drawn with [dc.js](http://dc-js.github.io/dc.js/). rcloud.dcplot pulls an
-R dataframe into a [crossfilter](https://github.com/crossfilter/crossfilter) instance.
+R dataframe into a [crossfilter](http://crossfilter.github.io/crossfilter/) instance.
 An intermediate library, [dcplot.js](https://github.com/att/dcplot.js), performs the inference
 and defaulting of chart parameters. As with all RCloud-JavaScript packages, [rserve.js](https://github.com/att/rserve-js) performs the magic translation from R to
 JavaScript data structures. 
