@@ -131,8 +131,27 @@
         }
         return ret;
     }
-    function make_chart_div(name, definition) {
 
+    function filter_controls(reset_action, description) {
+        description = description || 'Current filter';
+        var reset = $('<a/>',
+                      {class: 'reset',
+                       href: '#',
+                       style: "display: none;"})
+                .append("reset")
+                .click(function(e) {
+                        e.preventDefault();
+                        reset_action();
+                });
+        return $('<span></span>')
+            .append($('<span/>', {class: 'reset', style: 'display: none;'})
+                    .append(description + ': ')
+                    .append($('<span/>', {class: 'filter'})))
+            .append('&nbsp;&nbsp;')
+            .append(reset);
+    }
+
+    function make_chart_div(name, definition) {
         var title = definition.title;
         var table = $();
         var props = {id: name};
@@ -147,30 +166,16 @@
             props['class'] = 'table table-hover';
         }
 
-        var reset = $('<a/>',
-                      {class: 'reset',
-                       href: '#',
-                       style: "display: none;"})
-                .append("reset")
-                .click(function(group_name) {
-                    return function(e) {
-                        e.preventDefault();
-                        window.wdcplot_registry[group_name].charts[name].filterAll();
-                        dc.redrawAll(group_name);
-                    };
-                }(chart_group_name(chart_group)));
-
+        var group_name = chart_group_name(chart_group);
         return $('<div/>',props)
             .append($('<div/>')
                     .append($('<strong/>').append(title))
                     .append('&nbsp;&nbsp;')
-                    .append($('<span/>', {class: 'reset', style: 'display: none;'})
-                            .append('Current filter: ')
-                            .append($('<span/>', {class: 'filter'})))
-                    .append('&nbsp;&nbsp;')
-                    .append(reset)
-
-        ).append(table);
+                    .append(filter_controls(function() {
+                        window.wdcplot_registry[group_name].charts[name].filterAll();
+                        dc.redrawAll(group_name);
+                    })))
+            .append(table);
     }
 
     var wdcplot = {
@@ -178,6 +183,7 @@
             return rdata[k][r];
         },
         format_error: dcplot.format_error,
+        filter_controls: filter_controls,
         translate: function(data) {
             var frame = dataframe.cols(data);
             // allow skipping sections (but don't allow repeated sections)
