@@ -1,256 +1,17 @@
 // generates dcplot chart descriptions from an EDSL in R
 //////////////////////////////////////////////////////////////////////////////
-(function() { function _wdcplot(dcplot, dataframe, dc) {
+(function() { function _wdcplot(dcplot, dataframe, dc, jsexpr) {
     var chart_group = 0;
     // initialize a global namespace for chart groups and their crossfilter stuff
     window.wdcplot_registry = window.wdcplot_registry || {};
     window.wdcplot_current = null;
 
+    function dcplot_eval(text) {
+        return eval(text);
+    }
+    
     function chart_group_name(group_no) {
         return 'dcplotgroup' + group_no;
-    }
-
-    function bin_op_fun(f) {
-        return function(frame, args, ctx) {
-            var lhs = expression(frame, args[1], ctx),
-                rhs = expression(frame, args[2], ctx);
-            return {lambda: lhs.lambda || rhs.lambda, text: f(lhs.text, rhs.text)};
-        };
-    }
-
-    function bin_op(disp) {
-        return bin_op_fun(function(left, right) {
-            return left + disp + right;
-        });
-    }
-
-    function una_or_bin_op(disp) {
-        return function(frame, args, ctx) {
-            if(args.length===2) {
-                var operand = expression(frame, args[1], ctx);
-                return {lambda: operand.lambda, text: disp + operand.text};
-            }
-            else return bin_op(disp)(frame, args, ctx);
-        };
-    }
-
-    function value(v) {
-        return _.isString(v) ? '"' + v + '"' : v;
-    }
-
-    function comma_sep(frame, args, ctx) {
-        var elems = _.map(args, function(arg) { return expression(frame, arg, ctx); });
-        return {
-            lambda: _.some(elems, function(e) { return e.lambda; }),
-            text: _.pluck(elems, 'text').join(', ')
-        };
-    }
-
-    var operators = {
-        "$": bin_op('.'),
-        "-": una_or_bin_op('-'),
-        "+": una_or_bin_op('+'),
-        "*": bin_op('*'),
-        "/": bin_op('/'),
-        "<": bin_op('<'),
-        ">": bin_op('>'),
-        "<=": bin_op('<='),
-        ">=": bin_op('>='),
-        "==": bin_op('==='),
-        "!=": bin_op('!=='),
-        "^": bin_op_fun(function(left, right) { // note: ** gets converted to ^
-            return "Math.pow(" + left + ", " + right + ")";
-        }),
-        "c" : function(frame, args, ctx) {
-            var elems = comma_sep(frame, args.slice(1), ctx);
-            return {lambda: elems.lambda,
-                    text: '[' + elems.text + ']'};
-        },
-        "[": function(frame, args, ctx) {
-            var ray = expression(frame, args[1], ctx),
-                sub = expression(frame, args[2], ctx);
-            return {lambda: ray.lambda || sub.lambda,
-                    text: ray.text + '[' + sub.text + ']'};
-        },
-        "if": function(frame, args, ctx) {
-            var cond = expression(frame, args[1], ctx),
-                then = expression(frame, args[2], ctx),
-                else_ = expression(frame, args[3], ctx);
-            return {lambda: cond.lambda || then.lambda || else_.lambda,
-                    text: cond.text + '?' + then.text + ':' + else_.text};
-        },
-        "string": function(frame, args, ctx) {
-            return {lambda: false, text: '"' + args[1] + '"'};
-        },
-        default: function(frame, args, ctx) { // parens or function application
-            var fun = expression(frame, args[0], ctx),
-                elems = comma_sep(frame, args.slice(1), ctx);
-            return {
-                lambda: elems.lambda,
-                text: (fun.text==='(' ? '' : fun.text) + '(' +
-                    elems.text + ')'
-            };
-        }
-    };
-
-    function lambda_body(frame, exprs, ctx) {
-        var body = _.map(exprs, function(arg) {
-            return expression(frame, arg, ctx).text;
-        });
-        body[body.length-1] = "return " + body[body.length-1];
-        var cr = "\n", indent = Array(ctx.indent+1).join("\t");
-        return indent + body.join(";" + cr + indent) + ";";
-    }
-
-    function lambda(frame, sexp, ctx) {
-        ctx.indent++;
-        var args = sexp[0].slice(1);
-        var cr = "\n";
-        var text = "(function (" + args.join() + ") {" + cr +
-            lambda_body(frame, sexp.slice(1), ctx) + cr;
-        ctx.indent--;
-        var indent = Array(ctx.indent+1).join("\t");
-        text += indent + "})";
-        // what? not a lambda? no, we just don't need to wrap it as one
-        // if it ends up evaluating into a lambda that's cool
-        return {lambda: false, text: text};
-    }
-
-    function list(frame, sexp, ctx) {
-        var lambda = false;
-        ctx.indent++;
-        var elems = [];
-        for(var i=1; i<sexp.length; ++i) {
-            var key = sexp[i][0];
-            var val = expression(frame, sexp[i][1], ctx);
-            elems.push(key + ': ' + val.text);
-            lambda |= val.lambda;
-        }
-        ctx.indent--;
-        return {lambda: lambda, text: '({' + elems.join(', ') + '})'};
-    }
-
-    function node(frame, sexp, ctx) {
-        if($.isArray(sexp[0]) && sexp[0][0] === "func") // special case lambda expr trees
-            return lambda(frame, sexp, ctx);
-        else if($.isArray(sexp[0]) && !sexp[0][0] && sexp[0][1] === "list") // special case lists (?)
-            return list(frame, sexp, ctx);
-        var op = operators[sexp[0]] || operators.default;
-        return op(frame, sexp, ctx);
-    }
-
-    function is_wdcplot_placeholder(sexp) {
-        return sexp.r_attributes && sexp.r_attributes['wdcplot.placeholder'];
-    }
-
-    function special_function(sexp) {
-        return is_wdcplot_placeholder(sexp) && sexp.r_attributes['wdcplot.placeholder'] === 'special' ?
-            sexp[0] : undefined;
-    }
-
-    function dataframe_column(sexp) {
-        return is_wdcplot_placeholder(sexp) && sexp.r_attributes['wdcplot.placeholder'] === 'column' ?
-            sexp[0] : undefined;
-    }
-
-    function col_name(elem) {
-        var place;
-        if((place = special_function(elem)))
-            return '..' + place + '..';
-        else if((place = dataframe_column(elem)))
-            return place;
-        return null;
-    }
-
-    function col_ref(elem, field) {
-        var placeholder = col_name(elem);
-        if(placeholder)
-            return placeholder;
-        else {
-            if(!_.isString(elem))
-                throw field + " expects column, special, or string, got: " + elem;
-            return elem;
-        }
-    }
-
-    function leaf(frame, sexp, ctx) {
-        if($.isPlainObject(sexp)) {
-            return {lambda: false, text: JSON.stringify(sexp)};
-        }
-        else if(_.isArray(sexp)) {
-            var place;
-            if((place = special_function(sexp))) {
-                switch(place) {
-                case 'index': return {lambda: true, text: "frame.index(key)"};
-                case 'value':
-                case 'selected': return {lambda: true, text: "value"};
-                case 'key': return {lambda: true, text: "key"};
-                default: throw "unknown special variable " + sexp;
-                }
-            }
-            else if((place = dataframe_column(sexp)))
-                return {lambda: true, text: "frame.access('" + place + "')(key)"};
-            else return {lambda: false, text: sexp};
-        }
-        else return {lambda: false, text: sexp};
-    }
-
-    function expression(frame, sexp, ctx) {
-        // not dealing with cases where r classes are not terminals yet
-        if($.isArray(sexp) && !is_wdcplot_placeholder(sexp))
-            return node(frame, sexp, ctx);
-        else
-            return leaf(frame, sexp, ctx);
-    }
-
-    var wdcplot_expr_num = 1;
-
-    /* a wdcplot argument may be
-     - null
-     - a column accessor or special variable marked with class attribute
-     - an array (we assume any top-level array contains only literals)
-     - a string or a number
-     - otherwise we build javascript from the expression tree; if it contains
-     field names identifiers, it's a lambda(key,value) else execute it immediately
-     */
-    function argument(frame, sexp) {
-        if(sexp===null)
-            return null;
-        else if(_.isArray(sexp)) {
-            // bypass eval for bare special variables and columns
-            var place;
-            if((place = special_function(sexp))) {
-                switch(place) {
-                case 'value':
-                case 'index': return frame.index;
-                case 'key': return function(k, v) { return k; };
-                default: throw "unknown special variable " + sexp;
-                }
-            }
-            else if((place = dataframe_column(sexp)))
-                return frame.access(place);
-            else if(sexp[0]==='c')
-                return sexp.slice(1);
-            // else we'll process as expression below
-        }
-        else if(_.isNumber(sexp) || _.isString(sexp))
-            return sexp;
-        var ctx = {indent:0};
-        var js_expr = expression(frame, sexp, ctx);
-        // incantation to make code show up in the debugger
-        js_expr.text += "\n//@ sourceURL=wdcplot.expr." + wdcplot_expr_num++ + ".js";
-        /*jshint -W061 */
-        if(js_expr.lambda) {
-            // it seems kind of screwy to use eval here but it has the nice property
-            // of using a closure, which new Function() does not, which makes it
-            // easier to inspect the js_expr in the debugger (without _.partial()
-            // getting in the way, etc.)
-            return function(key,value) { return eval(js_expr.text); };
-        }
-        else {
-            // the expression didn't involve any variables, so we can execute it now
-            return eval(js_expr.text);
-        }
     }
 
     function constant_fn(arg) {
@@ -262,7 +23,7 @@
         switch(sexp[0]) {
         case 'bin': return dcplot.group.bin(sexp[1]);
         case 'identity': return dcplot.group.identity;
-        default: return argument(frame, sexp); // but it's operating on keys?
+        default: return jsexpr.argument(frame, sexp, dcplot_eval); // but it's operating on keys?
         }
     }
 
@@ -275,59 +36,25 @@
         }
         else fname = sexp;
 
-        var wacc = (w === undefined) ? undefined: argument(frame, w);
+        var wacc = (w === undefined) ? undefined: jsexpr.argument(frame, w, dcplot_eval);
         if(_.isNumber(wacc)) wacc = constant_fn(wacc);
 
         switch(fname) {
         case 'count': return (w === undefined) ? dcplot.reduce.count : dcplot.reduce.sum(wacc);
-        case 'sum': return dcplot.reduce.sum(argument(frame, sexp[1]),wacc);
-        case 'any': return dcplot.reduce.any(argument(frame, sexp[1]));
-        case 'avg': return dcplot.reduce.avg(argument(frame, sexp[1]),wacc);
-        default: return argument(frame, sexp);
+        case 'sum': return dcplot.reduce.sum(jsexpr.argument(frame, sexp[1], dcplot_eval),wacc);
+        case 'any': return dcplot.reduce.any(jsexpr.argument(frame, sexp[1], dcplot_eval));
+        case 'avg': return dcplot.reduce.avg(jsexpr.argument(frame, sexp[1], dcplot_eval),wacc);
+        default: return jsexpr.argument(frame, sexp, dcplot_eval);
         }
-    }
-
-    // take an array of named or unnamed arguments and for any that are unnamed
-    // at the beginning, give them the names specified in names
-    // a cheap, incomplete implementation of R positional arguments
-    function positionals(sexps, names) {
-        var ret = [];
-        if(!sexps.length)
-            return ret;
-        var i, names_started = false;
-        if(!_.isArray(sexps[0])) {
-            if(names.length < sexps.length)
-                throw "ran out of positional arguments - use names";
-            for(i = 0; i < sexps.length; ++i)
-                ret.push([names[i], sexps[i]]);
-        }
-        else for(i = 0; i < sexps.length; ++i) {
-            var elem = sexps[i];
-            if(names_started) {
-                if(!elem[0])
-                    throw "all positional arguments must be first";
-                ret.push(elem);
-            }
-            else {
-                if(elem[0] !== null) {
-                    names_started = true;
-                    ret.push(elem);
-                }
-                else if(names.length-1 < i)
-                    throw "ran out of positional arguments - use names";
-                else ret.push([names[i], elem[1]]);
-            }
-        }
-        return ret;
     }
 
     function do_dimensions(frame, sexps) {
         var ret = {};
-        // could almost use positionals() here except that you can mix named & unnamed
+        // could almost use jsexpr.positionals() here except that you can mix named & unnamed
         for(var i = 0; i < sexps.length; ++i) {
             var elem = sexps[i], key, value;
             if(_.isArray(elem)) {
-                var placeholder = col_name(elem);
+                var placeholder = jsexpr.col_name(elem);
                 if(placeholder) {
                     key = placeholder;
                     value = elem;
@@ -341,7 +68,7 @@
             }
             else throw 'illegal dimension specification ' + elem.toString();
 
-            ret[key] = argument(frame, value);
+            ret[key] = jsexpr.argument(frame, value, dcplot_eval);
         }
         return ret;
     }
@@ -351,7 +78,7 @@
         for(var i = 0; i < sexps.length; ++i) {
             var name = sexps[i][0], defn = sexps[i][1];
             if(name === "weight") continue;
-            defn = positionals(defn, [null, 'dimension', 'group', 'reduce', 'weight']);
+            defn = jsexpr.positionals(defn, [null, 'dimension', 'group', 'reduce', 'weight']);
             if(defn[0][0] !== null)
                 throw "expected a null here";
             if(defn[0][1] !== "group")
@@ -361,7 +88,7 @@
                 var field = defn[j][0], val;
                 switch(field) {
                 case 'dimension':
-                    val = col_ref(defn[j][1], "dimension");
+                    val = jsexpr.col_ref(defn[j][1], "dimension");
                     break;
                 case 'group':
                     val = group_constructor(frame, defn[j][1]);
@@ -383,7 +110,7 @@
             var val = sexps[i][1];
             // pity we can't do more positional args but dimension or group is
             // the next natural argument and we don't know which
-            val = positionals(val, [null, 'title']);
+            val = jsexpr.positionals(val, [null, 'title']);
             if(val[0][0] !== null)
                 throw "expected a null here";
             var defn = {type: val[0][1]};
@@ -391,12 +118,12 @@
             for(var j = 1; j < val.length; ++j) {
                 var key = val[j][0], value = val[j][1];
                 switch(key) {
-                case 'dimension': defn[key] = col_ref(value, "dimension"); // don't allow lambdas here
+                case 'dimension': defn[key] = jsexpr.col_ref(value, "dimension"); // don't allow lambdas here
                     break;
-                case 'group': defn[key] = col_ref(value, "group");
+                case 'group': defn[key] = jsexpr.col_ref(value, "group");
                     break;
                 default:
-                    defn[key] = argument(frame, value);
+                    defn[key] = jsexpr.argument(frame, value, dcplot_eval);
                 }
             }
             var name = sexps[i][0] + '_' + chart_group + '_' + i;
@@ -483,7 +210,7 @@
                     var weight = _.find(secdata, function(exp) { return exp[0] === "weight"; });
                     definition.defreduce = (weight === undefined) ?
                         dcplot.reduce.count :
-                        dcplot.reduce.sum(argument(frame, weight[1]));
+                        dcplot.reduce.sum(jsexpr.argument(frame, weight[1], dcplot_eval));
                     definition.groups = do_groups(frame, secdata, weight);
                     break;
                 case 'charts':
@@ -510,7 +237,7 @@
     return wdcplot;
 }
 if(typeof define === "function" && define.amd) {
-    define(["dcplot", "dataframe", "dc"], _wdcplot);
+    define(["dcplot", "dataframe", "dc", "jsexpr"], _wdcplot);
 } else if(typeof module === "object" && module.exports) {
     module.exports = _wdcplot(dcplot, dataframe);
 } else {

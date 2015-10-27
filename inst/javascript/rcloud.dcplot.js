@@ -6,7 +6,8 @@ requirejs.config({
         "dcplot": "../../shared.R/rcloud.dcplot/dcplot",
         "dataframe": "../../shared.R/rcloud.dcplot/dataframe",
         "dc": "../../shared.R/rcloud.dcplot/dc",
-        "crossfilter": "../../shared.R/rcloud.dcplot/crossfilter"
+        "crossfilter": "../../shared.R/rcloud.dcplot/crossfilter",
+        "jsexpr": "../../shared.R/rcloud.dcplot/rcloud.jsexpr"
     },
     "shim": {
         "crossfilter": {
