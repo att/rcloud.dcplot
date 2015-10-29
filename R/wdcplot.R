@@ -1,7 +1,12 @@
 wdcplot.special.variable <- function(name) structure(name, wdcplot.placeholder = "special")
 wdcplot.column <- function(name) structure(name, wdcplot.placeholder = "column")
 
-wdcplot.default.context <- NULL
+wdcplot.state <- new.env()
+
+# really we want multiple contexts and chart groups and so on
+wdcplot.get.default.context <- function()
+  wdcplot.state$default.context
+
 
 wdcplot.keywords <- c('group', 'groups', 'dimension', 'dimensions', 'chart', 'charts')
 
@@ -39,6 +44,7 @@ wdcplot.substitute <- function(context, expr) {
 
 wdcplot <- function(data, dims=NULL, groups=NULL, charts=NULL) {
   context <- list(data=data)
+  assign('default.context', context, envir=wdcplot.state)
 
   dims2 <- wdcplot.substitute(context, substitute(dims))
   groups2 <- wdcplot.substitute(context, substitute(groups))
