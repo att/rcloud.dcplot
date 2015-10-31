@@ -230,7 +230,7 @@
         js_expr.text += "\n//@ sourceURL=wdcplot.expr." + wdcplot_expr_num++ + ".js";
         // eval in the context that client wants (to get its dependencies)
         if(js_expr.lambda) {
-            return function(key,value) { return eval_fn(js_expr.text); };
+            return function(key,value) { return eval_fn(js_expr.text, key, value); };
         }
         else {
             return eval_fn(js_expr.text);

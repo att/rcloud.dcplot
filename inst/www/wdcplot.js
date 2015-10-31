@@ -6,7 +6,7 @@
     window.wdcplot_registry = window.wdcplot_registry || {};
     window.wdcplot_current = null;
 
-    function dcplot_eval(text) {
+    function dcplot_eval(text, key, value) {
         return eval(text);
     }
 
