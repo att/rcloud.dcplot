@@ -9,7 +9,7 @@
     function dcplot_eval(text) {
         return eval(text);
     }
-    
+
     function chart_group_name(group_no) {
         return 'dcplotgroup' + group_no;
     }
