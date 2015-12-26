@@ -22,7 +22,7 @@ return {
         // we always return undefined; "return error(...)" is just syntactic sugar
         function error(message) {
             k(function() {
-                return $('<p/>').append(message);
+                return $('<div/>').append(message);
             });
         }
         // it seems to me more of this belongs in wdcplot.js - e.g. window.charts is
