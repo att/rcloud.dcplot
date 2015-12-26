@@ -19,6 +19,12 @@ requirejs.config({
 
 return {
     handle_dcplot: function(data, k) {
+        // we always return undefined; "return error(...)" is just syntactic sugar
+        function error(message) {
+            k(function() {
+                return $('<p/>').append(message);
+            });
+        }
         // it seems to me more of this belongs in wdcplot.js - e.g. window.charts is
         // initialized and used there. there should only be stuff here to package this up.
         require(["wdcplot", "dcplot"], function(wdcplot, dcplot) {
@@ -27,10 +33,7 @@ return {
                 charts = wdcplot.translate.apply(null,data.slice(1));
             }
             catch(e) {
-                k(function() {
-                    return $('<p/>').append("Exception creating dcplot definition: " + e);
-                });
-                return;
+                return error("Exception creating dcplot definition: " + e);
             }
             try {
                 var dccharts = dcplot(charts.dataframe, charts.groupname, charts.defn);
@@ -38,12 +41,11 @@ return {
                 window.wdcplot_current = charts.groupname;
             }
             catch(e) {
-                k(function() {
-                    return wdcplot.format_error(e);
-                });
-                return;
+                var message = wdcplot.format_error(e);
+                return error(message);
             }
             k(function() { return charts.elem; });
+            return undefined; // for the linter
         });
     }
 };
